@@ -1,10 +1,9 @@
-<html>
-<head>
-    <base href="https://servicenow.accounting.app/">
+<html><head><base href="https://servicenow.accounting.app/%20I%20really%20like%20this,%20can%20you%20also%20make%20the%20recent%20transaction%20dynamic%20to%20the%20color%20of%20the%20chart?%20so%20for%20example%20funding%20the%20background%20will%20be%20reddish,%20and%20for%20the%20calendar,%20give%20it%20a%20little%20more%20design,%20give%20the%20option%20to%20select%20months,%20and%20put%20more%20events%20and%20comments%20in%20it.%20For%20the%20calendar,%20put%20some%20more%20events%20so%20when%20I%20click%20on%20it%20I%20can%20see%20different%20comments%20like%20loan%20committee%20meeting,%20etc.%20and%20the%20recent%20transaction%20the%20color%20should%20be%20much%20more%20subtle%20so%20the%20white%20text%20doesn't%20get%20covered%20up.%20Give%20me%20some%20events%20on%20the%20calendar%20for%20month%20july%202024%20and%20Aug%202024,%20different%20colors,%20and%20when%20I%20click%20on%20them%20I%20can%20see%20events%20like%20loan%20committee%20meeting,%20donation%20campaign%20etc.%0A%0AAmazing,%20now%20can%20you%20add%20some%20more%20pills%20in%20the%20quick%20action,%20such%20as:%20New%20Funding,%20which%20upon%20clicking,%20opens%20a%20new%20page%20on%20the%20browser:%20https://ignytegroupinc6.service-now.com/now/nav/ui/classic/params/target/sn_gsm_funding_transactions.do%3Fsys_id%3D-1%26sys_is_list%3Dtrue%26sys_target%3Dsn_gsm_funding_transactions%26sysparm_checked_items%3D%26sysparm_fixed_query%3D%26sysparm_group_sort%3D%26sysparm_list_css%3D%26sysparm_query%3D%26sysparm_referring_url%3Dsn_gsm_funding_transactions_list.do%26sysparm_target%3D%26sysparm_view%3D%0A%0Aand%20new%20bonds">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ServiceNow for Accounting | Financial Management Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@2.0.2/build/global/luxon.min.js"></script>
     <style>
         body {
             font-family: 'Roboto', sans-serif;
@@ -94,14 +93,117 @@
             padding: 0;
         }
         #transactionList li {
-            background-color: #f0f4f8;
             margin-bottom: 8px;
             padding: 10px;
             border-radius: 6px;
             transition: background-color 0.3s ease;
+            color: #333;
         }
         #transactionList li:hover {
+            filter: brightness(90%);
+        }
+        .task-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .task-list li {
+            background-color: #f0f4f8;
+            margin-bottom: 8px;
+            padding: 10px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .task-list li:hover {
             background-color: #e6eaf0;
+        }
+        .task-list .task-status {
+            font-weight: bold;
+        }
+        .task-list .task-status.urgent {
+            color: #d9534f;
+        }
+        .task-list .task-status.normal {
+            color: #5bc0de;
+        }
+        #calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .calendar-nav {
+            display: flex;
+            gap: 10px;
+        }
+        .calendar-nav button, .calendar-nav select {
+            background-color: #0070ad;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .calendar-day {
+            background-color: #f0f4f8;
+            padding: 5px;
+            text-align: center;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .calendar-day:hover {
+            background-color: #e6eaf0;
+        }
+        .calendar-day.today {
+            background-color: #0070ad;
+            color: white;
+            font-weight: bold;
+        }
+        .calendar-day.has-event {
+            color: white;
+            font-weight: bold;
+        }
+        .calendar-day.selected {
+            background-color: #28a745;
+            color: white;
+        }
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .pill-action {
+            background-color: #f0f4f8;
+            border: none;
+            color: #0070ad;
+            padding: 8px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 0.9em;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        .pill-action:hover {
+            background-color: #0070ad;
+            color: white;
+        }
+        #eventDetails {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f0f4f8;
+            border-radius: 6px;
+            display: none;
         }
     </style>
 </head>
@@ -149,34 +251,91 @@
                 <h2>Recent Transactions</h2>
                 <ul id="transactionList"></ul>
             </div>
+            <div class="card">
+                <h2>Pending Tasks</h2>
+                <ul class="task-list">
+                    <li>
+                        <span>Review Q2 Financial Report</span>
+                        <span class="task-status urgent">Urgent</span>
+                    </li>
+                    <li>
+                        <span>Approve New Grant Application</span>
+                        <span class="task-status normal">Normal</span>
+                    </li>
+                    <li>
+                        <span>Update Loan Terms for Client XYZ</span>
+                        <span class="task-status normal">Normal</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="card">
+                <h2>Quick Actions</h2>
+                <div class="quick-actions">
+                    <button class="pill-action" onclick="showAlert('New transaction initiated')">New Transaction</button>
+                    <button class="pill-action" onclick="showAlert('Grant approval process started')">Approve Grant</button>
+                    <button class="pill-action" onclick="showAlert('Loan application form opened')">Process Loan</button>
+                    <button class="pill-action" onclick="showAlert('Financial report generator launched')">Generate Report</button>
+                    <button class="pill-action" onclick="showAlert('Payment system accessed')">Process Payment</button>
+                    <button class="pill-action" onclick="window.open('https://ignytegroupinc6.service-now.com/now/nav/ui/classic/params/target/sn_gsm_funding_transactions.do%3Fsys_id%3D-1%26sys_is_list%3Dtrue%26sys_target%3Dsn_gsm_funding_transactions%26sysparm_checked_items%3D%26sysparm_fixed_query%3D%26sysparm_group_sort%3D%26sysparm_list_css%3D%26sysparm_query%3D%26sysparm_referring_url%3Dsn_gsm_funding_transactions_list.do%26sysparm_target%3D%26sysparm_view%3D', '_blank')">New Funding</button>
+                    <button class="pill-action" onclick="showAlert('New bonds process initiated')">New Bonds</button>
+                </div>
+            </div>
+            <div class="card wide-card">
+                <h2>Monthly Calendar</h2>
+                <div class="calendar-header">
+                    <div class="calendar-nav">
+                        <button onclick="changeMonth(-1)">Previous</button>
+                        <select id="monthSelect" onchange="selectMonth()">
+                            <option value="0">January</option>
+                            <option value="1">February</option>
+                            <option value="2">March</option>
+                            <option value="3">April</option>
+                            <option value="4">May</option>
+                            <option value="5">June</option>
+                            <option value="6">July</option>
+                            <option value="7">August</option>
+                            <option value="8">September</option>
+                            <option value="9">October</option>
+                            <option value="10">November</option>
+                            <option value="11">December</option>
+                        </select>
+                        <select id="yearSelect" onchange="selectMonth()">
+                            <option value="2023">2023</option>
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                        </select>
+                        <button onclick="changeMonth(1)">Next</button>
+                    </div>
+                    <h3 id="currentMonth"></h3>
+                </div>
+                <div id="calendar"></div>
+                <div id="eventDetails"></div>
+            </div>
         </div>
     </main>
     <script>
         // Financial Utilization Chart
         const ctx = document.getElementById('utilizationChart').getContext('2d');
+        const chartColors = [
+            'rgba(255, 99, 132, 0.7)',
+            'rgba(54, 162, 235, 0.7)',
+            'rgba(255, 206, 86, 0.7)',
+            'rgba(75, 192, 192, 0.7)',
+            'rgba(153, 102, 255, 0.7)',
+            'rgba(255, 159, 64, 0.7)'
+        ];
+        const chartLabels = ['Funding', 'Loans', 'Donations', 'Bonds', 'Grants', 'Equity'];
+        const chartData = [13350000, 15829380, 5500020, 9112050, 17035000, 7022580];
+
         new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['Funding', 'Loans', 'Donations', 'Bonds', 'Grants', 'Equity'],
+                labels: chartLabels,
                 datasets: [{
                     label: 'Utilization ($)',
-                    data: [13350000, 15829380, 5500020, 9112050, 17035000, 7022580],
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.7)',
-                        'rgba(54, 162, 235, 0.7)',
-                        'rgba(255, 206, 86, 0.7)',
-                        'rgba(75, 192, 192, 0.7)',
-                        'rgba(153, 102, 255, 0.7)',
-                        'rgba(255, 159, 64, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 206, 86, 1)',
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 159, 64, 1)'
-                    ],
+                    data: chartData,
+                    backgroundColor: chartColors,
+                    borderColor: chartColors.map(color => color.replace('0.7', '1')),
                     borderWidth: 1
                 }]
             },
@@ -206,19 +365,122 @@
 
         // Recent Transactions List
         const transactions = [
-            { type: 'Grant', description: 'Research Fund Allocation', amount: '$250,000' },
-            { type: 'Loan', description: 'Small Business Support Program', amount: '$500,000' },
-            { type: 'Donation', description: 'Annual Charity Gala Proceeds', amount: '$75,000' },
-            { type: 'Bond', description: 'Municipal Infrastructure Project', amount: '$2,000,000' },
+            { type: 'Funding', description: 'Venture Capital Investment', amount: '$2,000,000' },
+            { type: 'Loans', description: 'Small Business Support Program', amount: '$500,000' },
+            { type: 'Donations', description: 'Annual Charity Gala Proceeds', amount: '$75,000' },
+            { type: 'Bonds', description: 'Municipal Infrastructure Project', amount: '$2,000,000' },
+            { type: 'Grants', description: 'Research Fund Allocation', amount: '$250,000' },
             { type: 'Equity', description: 'Tech Startup Investment', amount: '$750,000' }
         ];
 
         const transactionList = document.getElementById('transactionList');
-        transactions.forEach(transaction => {
+        transactions.forEach((transaction, index) => {
             const li = document.createElement('li');
             li.innerHTML = `<strong>${transaction.type}:</strong> ${transaction.description} - ${transaction.amount}`;
+            li.style.backgroundColor = chartColors[index].replace('0.7', '0.2');
             transactionList.appendChild(li);
         });
+
+        // Calendar
+        const calendar = document.getElementById('calendar');
+        const eventDetails = document.getElementById('eventDetails');
+        const currentMonthElement = document.getElementById('currentMonth');
+        const monthSelect = document.getElementById('monthSelect');
+        const yearSelect = document.getElementById('yearSelect');
+        const DateTime = luxon.DateTime;
+        let currentDate = DateTime.now();
+
+        // Sample events with different colors
+        const events = {
+            '2024-07-05': { title: 'Loan Committee Meeting', color: '#FF6B6B', description: 'Reviewing and approving small business loan applications.' },
+            '2024-07-15': { title: 'Quarterly Financial Review', color: '#4ECDC4', description: 'Comprehensive analysis of Q2 financial performance.' },
+            '2024-07-22': { title: 'Board Meeting', color: '#45B7D1', description: 'Discussing strategic initiatives and budget allocations.' },
+            '2024-07-28': { title: 'Donation Campaign Kickoff', color: '#FFA07A', description: 'Launching our annual fundraising drive for local charities.' },
+            '2024-08-01': { title: 'New Fiscal Year Kickoff', color: '#98D8C8', description: 'Team meeting to align on goals and objectives for the new fiscal year.' },
+            '2024-08-10': { title: 'Grant Application Deadline', color: '#F06292', description: 'Last day to submit applications for the Fall Grant Program.' },
+            '2024-08-18': { title: 'Investor Relations Call', color: '#AEC6CF', description: 'Quarterly update call with major investors.' },
+            '2024-08-25': { title: 'Financial Audit Preparation', color: '#836953', description: 'Internal review of financial records in preparation for annual audit.' },
+            '2024-08-30': { title: 'End of Month Reconciliation', color: '#779ECB', description: 'Finalizing monthly financial statements and reconciliations.' }
+        };
+
+        function renderCalendar() {
+            calendar.innerHTML = '';
+            currentMonthElement.textContent = currentDate.toFormat('MMMM yyyy');
+            monthSelect.value = currentDate.month - 1;
+            yearSelect.value = currentDate.year;
+
+            const startOfMonth = currentDate.startOf('month');
+            const endOfMonth = currentDate.endOf('month');
+
+            // Add day labels
+            const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            dayLabels.forEach(day => {
+                const dayLabel = document.createElement('div');
+                dayLabel.textContent = day;
+                dayLabel.style.fontWeight = 'bold';
+                calendar.appendChild(dayLabel);
+            });
+
+            // Add empty cells for days before the start of the month
+            for (let i = 0; i < startOfMonth.weekday % 7; i++) {
+                calendar.appendChild(document.createElement('div'));
+            }
+
+            for (let day = startOfMonth; day <= endOfMonth; day = day.plus({ days: 1 })) {
+                const dayElement = document.createElement('div');
+                dayElement.classList.add('calendar-day');
+                dayElement.textContent = day.day;
+
+                if (day.hasSame(DateTime.now(), 'day')) {
+                    dayElement.classList.add('today');
+                }
+
+                const eventKey = day.toFormat('yyyy-MM-dd');
+                if (events[eventKey]) {
+                    dayElement.classList.add('has-event');
+                    dayElement.style.backgroundColor = events[eventKey].color;
+                }
+
+                dayElement.addEventListener('click', () => handleDayClick(day, dayElement, eventKey));
+
+                calendar.appendChild(dayElement);
+            }
+        }
+
+        function handleDayClick(day, element, eventKey) {
+            document.querySelectorAll('.calendar-day').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+
+            if (events[eventKey]) {
+                eventDetails.style.display = 'block';
+                eventDetails.innerHTML = `
+                    <h3>${events[eventKey].title}</h3>
+                    <p><strong>${day.toFormat('MMMM d, yyyy')}</strong></p>
+                    <p>${events[eventKey].description}</p>
+                `;
+                eventDetails.style.borderLeft = `5px solid ${events[eventKey].color}`;
+            } else {
+                eventDetails.style.display = 'none';
+            }
+        }
+
+        function changeMonth(delta) {
+            currentDate = currentDate.plus({ months: delta });
+            renderCalendar();
+        }
+
+        function selectMonth() {
+            const selectedMonth = parseInt(monthSelect.value);
+            const selectedYear = parseInt(yearSelect.value);
+            currentDate = DateTime.local(selectedYear, selectedMonth + 1, 1);
+            renderCalendar();
+        }
+
+        function showAlert(message) {
+            alert(message);
+        }
+
+        // Initial calendar render
+        renderCalendar();
     </script>
-</body>
-</html>
+</body></html>
